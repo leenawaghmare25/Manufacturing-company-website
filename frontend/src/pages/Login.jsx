@@ -1,0 +1,240 @@
+// Import React and useState hook for managing component state
+import React, { useState } from 'react';
+// Import axios for making HTTP API requests to the backend
+import axios from 'axios';
+// Import useNavigate for programmatic page navigation
+import { useNavigate } from 'react-router-dom';
+// Import icons from lucide-react for visual elements
+import { Factory, Eye, EyeOff } from 'lucide-react';
+
+// ============================================================
+// LOGIN PAGE — Authentication screen for both Job Managers and Production Staff
+// Users enter email, password, and select their role to log in.
+// On success, a JWT token is stored in localStorage for future API requests.
+// ============================================================
+
+const Login = () => {
+  // Form state — stores the user's input values
+  const [email, setEmail] = useState('');           // Email address input
+  const [password, setPassword] = useState('');      // Password input
+  const [role, setRole] = useState('Job Manager');   // Selected role dropdown (default: Job Manager)
+  const [error, setError] = useState('');             // Error message to display on failed login
+  const [showPassword, setShowPassword] = useState(false); // Toggle password visibility (eye icon)
+  const [loading, setLoading] = useState(false);      // Loading state while login request is in progress
+  const navigate = useNavigate();                      // Hook for navigating to different pages
+
+  // Handle the login form submission
+  const handleLogin = async (e) => {
+    e.preventDefault();  // Prevent the default form submission (page reload)
+    setError('');         // Clear any previous error message
+    setLoading(true);     // Show loading state on the button
+
+    try {
+      // Use environment variable for API base or fallback to production URL
+      const API_BASE = import.meta.env.VITE_API_URL || 'https://manufacturing-company-job-mgmt-module.onrender.com/api';
+
+      // Send POST request to the login API endpoint
+      // "username" field sends the email (backend expects "username")
+      const response = await axios.post(`${API_BASE}/auth/login`, {
+        username: email,   // Email address used as username
+        password: password, // Plain text password
+        role: role          // Selected role (Job Manager or Production Staff)
+      });
+
+      // Extract the response data — token for auth, user info for display
+      const { token, role: userRole, userId, userName } = response.data;
+      
+      // Store authentication data in localStorage so it persists across page refreshes
+      localStorage.setItem('token', token);       // JWT token for API authorization
+      localStorage.setItem('role', userRole);      // User's role for conditional rendering
+      localStorage.setItem('userId', userId);      // User's database ID
+      localStorage.setItem('userName', userName);  // User's display name
+
+      // Redirect to the appropriate dashboard based on the user's role
+      if (userRole === 'Job Manager') {
+        navigate('/manager-dashboard');   // Managers see the job management dashboard
+      } else {
+        navigate('/worker-dashboard');     // Workers see the production staff dashboard
+      }
+    } catch (err) {
+      // If login fails, display the error message from the backend (or a default message)
+      setError(err.response?.data?.message || 'Invalid credentials. Please try again.');
+    } finally {
+      setLoading(false); // Reset loading state regardless of success or failure
+    }
+  };
+
+  // Fill in demo credentials for quick testing
+  // These match the seeded user accounts in the database
+  const setDemoCredentials = (type) => {
+    if (type === 'manager') {
+      setEmail('manager@factory.com');     // Manager demo email
+      setPassword('manager123');            // Manager demo password
+      setRole('Job Manager');               // Set role to Job Manager
+    } else {
+      setEmail('worker@factory.com');       // Worker demo email
+      setPassword('worker123');             // Worker demo password
+      setRole('Production Staff');          // Set role to Production Staff
+    }
+  };
+
+  // === RENDER — The login page UI ===
+  return (
+    <div style={styles.container} className="container">
+      {/* App branding header with factory icon */}
+      <div style={styles.headerContainer}>
+        <div style={styles.iconCircle}>
+          <Factory size={32} color="#2563eb" />
+        </div>
+        <h1 style={styles.title}>Job Management System</h1>
+        <p style={styles.subtitle}>Manufacturing Operations Platform</p>
+      </div>
+
+      {/* Login card with form */}
+      <div style={styles.card}>
+        <h2 style={styles.cardHeading}>Welcome Back</h2>
+        <p style={styles.cardSubtext}>Sign in to access your dashboard</p>
+
+        {/* Error message display (only shown when there's an error) */}
+        {error && <div style={styles.errorBox}>{error}</div>}
+
+        {/* Login form */}
+        <form onSubmit={handleLogin} style={styles.form}>
+          {/* Email input field */}
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Email Address</label>
+            <input
+              type="email"
+              placeholder="your.email@factory.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={styles.input}
+              required
+            />
+          </div>
+
+          {/* Password input field with show/hide toggle */}
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Password</label>
+            <div style={styles.passwordWrapper}>
+              <input
+                type={showPassword ? 'text' : 'password'} // Toggle between hidden and visible
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={styles.input}
+                required
+              />
+              {/* Eye icon button to toggle password visibility */}
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}
+              >
+                {showPassword ? <EyeOff size={20} color="#6b7280" /> : <Eye size={20} color="#6b7280" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Role selection dropdown */}
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Login As</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              style={styles.select}
+            >
+              <option value="Job Manager">Job Manager</option>
+              <option value="Production Staff">Production Staff</option>
+            </select>
+          </div>
+
+          {/* Submit button — shows "Signing In..." while loading */}
+          <button type="submit" style={styles.submitButton} disabled={loading}>
+            {loading ? 'Signing In...' : 'Sign In'}
+          </button>
+        </form>
+
+        {/* Demo credentials section — quick buttons to fill in test credentials */}
+        <div style={styles.demoSection}>
+          <p style={styles.demoLabel}>Demo Credentials:</p>
+          <div style={styles.demoButtonsContainer} className="stack-on-mobile">
+            {/* Button to fill manager credentials */}
+            <button
+              onClick={() => setDemoCredentials('manager')}
+              style={styles.demoButton}
+            >
+              Manager Demo
+            </button>
+            {/* Button to fill worker credentials */}
+            <button
+              onClick={() => setDemoCredentials('worker')}
+              style={styles.demoButton}
+            >
+              Worker Demo
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer style={styles.footer}>
+        <p>© 2026 Manufacturing Operations Platform</p>
+        <p>Job Management Module v1.0</p>
+      </footer>
+    </div>
+  );
+};
+
+// ============================================================
+// STYLES — CSS-in-JS style definitions for the Login page
+// ============================================================
+const styles = {
+  // Full-page container — centers the login card vertically and horizontally
+  container: { minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', backgroundColor: '#f3f4f6' },
+  // Header section containing the app logo and title
+  headerContainer: { textAlign: 'center', marginBottom: '32px' },
+  // Circular icon container for the factory logo
+  iconCircle: { width: '64px', height: '64px', backgroundColor: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' },
+  // Main app title text
+  title: { fontSize: '24px', fontWeight: 'bold', color: '#111827', marginBottom: '4px' },
+  // Subtitle text below the title
+  subtitle: { fontSize: '14px', color: '#6b7280', fontWeight: '500' },
+  // White card container for the login form
+  card: { width: '100%', maxWidth: '400px', backgroundColor: 'white', borderRadius: '16px', padding: '32px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' },
+  // Card heading ("Welcome Back")
+  cardHeading: { fontSize: '22px', fontWeight: '700', color: '#111827', marginBottom: '8px', textAlign: 'center' },
+  // Card subtext description
+  cardSubtext: { fontSize: '14px', color: '#6b7280', textAlign: 'center', marginBottom: '32px' },
+  // Red error box for displaying login errors
+  errorBox: { backgroundColor: '#fef2f2', color: '#b91c1c', padding: '12px', borderRadius: '8px', fontSize: '14px', marginBottom: '20px', textAlign: 'center', border: '1px solid #fee2e2' },
+  // Form layout — vertical flex with gap
+  form: { display: 'flex', flexDirection: 'column', gap: '20px' },
+  // Input group — label + input pair
+  inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
+  // Input label text
+  label: { fontSize: '14px', fontWeight: '600', color: '#374151' },
+  // Text input styling
+  input: { padding: '12px 16px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '16px', outline: 'none', transition: 'border-color 0.2s' },
+  // Password field wrapper for positioning the eye icon
+  passwordWrapper: { position: 'relative', display: 'flex', flexDirection: 'column' },
+  // Eye toggle button for password visibility
+  eyeButton: { position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' },
+  // Role selection dropdown
+  select: { padding: '12px 16px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '16px', backgroundColor: 'white', outline: 'none' },
+  // Blue submit button
+  submitButton: { backgroundColor: '#2563eb', color: 'white', padding: '12px', borderRadius: '8px', fontSize: '16px', fontWeight: '600', border: 'none', cursor: 'pointer', marginTop: '8px', transition: 'background-color 0.2s' },
+  // Demo credentials section container
+  demoSection: { marginTop: '32px', paddingTop: '24px', borderTop: '1px solid #f3f4f6', textAlign: 'center' },
+  // "DEMO CREDENTIALS" label
+  demoLabel: { fontSize: '13px', fontWeight: '600', color: '#9ca3af', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' },
+  // Container for demo buttons — displayed side-by-side
+  demoButtonsContainer: { display: 'flex', gap: '8px', width: '100%', boxSizing: 'border-box' },
+  // Individual demo button style
+  demoButton: { flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid #e5e7eb', backgroundColor: 'white', color: '#4b5563', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', boxSizing: 'border-box' },
+  // Footer text styling
+  footer: { marginTop: '40px', textAlign: 'center', color: '#9ca3af', fontSize: '12px' },
+};
+
+// Export the Login component as default
+export default Login;

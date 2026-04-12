@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+/* 
+  Tailwind v4 Configuration via CSS 
+  - @source defines where classes are scanned from (replaces 'content' in tailwind.config.js)
+*/
+@source "../index.html";
+@source "./auth/**/*.{js,ts,jsx,tsx}";
+@source "./components/**/*.{js,ts,jsx,tsx}";
+@source "./context/**/*.{js,ts,jsx,tsx}";
+@source "./pages/**/*.{js,ts,jsx,tsx}";
+@source "./utils/**/*.{js,ts,jsx,tsx}";
+@source "./App.jsx";
+@source "./main.jsx";
+
+/* Custom utility classes used in the dashboard */
+.container-custom {
+  @apply container mx-auto px-4 md:px-8;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .stat-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.table-container {
+  @apply w-full overflow-x-auto;
+}
+
+.header-responsive {
+  @apply flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8;
+}
+
+.controls-responsive {
+  @apply flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4;
+}
