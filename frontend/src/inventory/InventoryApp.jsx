@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Materials from "./pages/Materials";
@@ -9,7 +9,8 @@ import Orders from "./pages/Orders";
 
 function InventoryApp() {
   const location = useLocation();
-  const showSidebar = !location.pathname.startsWith("/inventory/orders") || location.pathname === "/inventory/orders/new";
+  // Show sidebar everywhere EXCEPT the full-screen orders list — always show on /orders/new
+  const showSidebar = !location.pathname.startsWith("/inventory/orders") || location.pathname.startsWith("/inventory/orders/new");
 
   return (
       <div className="flex">
@@ -24,6 +25,8 @@ function InventoryApp() {
             {/* /orders/new MUST come before /orders to avoid premature match */}
             <Route path="/orders/new" element={<NewOrder />} />
             <Route path="/orders" element={<Orders />} />
+            {/* Catch-all: redirect unknown paths back to dashboard */}
+            <Route path="*" element={<Navigate to="/inventory" replace />} />
 
           </Routes>
         </div>

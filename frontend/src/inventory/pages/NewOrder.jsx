@@ -63,15 +63,14 @@ export default function NewOrder() {
     try {
       await API.post("/inv-orders", payload);
 
-      alert("Order placed successfully");
-
       // ✅ Update supplier active orders
       await API.put(`/suppliers/${selectedSupplier.id}`, {
         ...selectedSupplier,
         active_orders: (selectedSupplier.active_orders || 0) + 1,
       });
 
-      navigate("/suppliers");
+      // ✅ Go back to suppliers page after placing order
+      navigate("/inventory/suppliers");
     } catch (err) {
       console.error("Order error:", err.response?.data || err.message);
       alert("Error placing order");
@@ -145,7 +144,7 @@ export default function NewOrder() {
 
             <button
               type="button"
-              onClick={() => navigate("/suppliers")}
+              onClick={() => navigate(-1)}
               className="bg-gray-300 px-4 py-2 rounded"
             >
               Cancel
