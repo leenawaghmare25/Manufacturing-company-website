@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Materials from "./pages/Materials";
@@ -8,9 +8,12 @@ import NewOrder from "./pages/NewOrder"; // ✅ ADD THIS
 import Orders from "./pages/Orders";
 
 function InventoryApp() {
+  const location = useLocation();
+  const showSidebar = !location.pathname.startsWith("/inventory/orders");
+
   return (
       <div className="flex">
-        <Layout />
+        {showSidebar && <Layout />}
 
         <div className="flex-1 bg-gray-100 min-h-screen">
           <Routes>

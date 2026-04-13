@@ -30,8 +30,8 @@ const Login = () => {
     setLoading(true);     // Show loading state on the button
 
     try {
-      // Use environment variable for API base or fallback to production URL
-      const API_BASE = import.meta.env.VITE_API_URL || 'https://manufacturing-company-job-mgmt-module.onrender.com/api';
+      // Use environment variable for API base or fallback to provided production backend URL
+      const API_BASE = import.meta.env.VITE_API_URL || 'https://manufacturing-company-website.onrender.com/api';
 
       // Send POST request to the login API endpoint
       // "username" field sends the email (backend expects "username")
@@ -52,7 +52,7 @@ const Login = () => {
 
       // Redirect to the appropriate dashboard based on the user's role
       if (userRole === 'Job Manager') {
-        navigate('/manager-dashboard');   // Managers see the job management dashboard
+        navigate('/inventory/orders');   // Managers see the Order Management dashboard by default
       } else {
         navigate('/worker-dashboard');     // Workers see the production staff dashboard
       }
@@ -86,7 +86,7 @@ const Login = () => {
         <div style={styles.iconCircle}>
           <Factory size={32} color="#2563eb" />
         </div>
-        <h1 style={styles.title}>Job Management System</h1>
+        <h1 style={styles.title}>Manufacturing Company</h1>
         <p style={styles.subtitle}>Manufacturing Operations Platform</p>
       </div>
 

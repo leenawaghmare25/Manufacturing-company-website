@@ -34,7 +34,14 @@ const UnifiedNavbar = () => {
           <div className="flex space-x-2">
             {navItems.map((item) => {
               // Highlight the active module
-              const isActive = location.pathname.startsWith(item.path);
+              let isActive = false;
+              if (item.path === '/inventory') {
+                // For Inventory, only highlight if the path is EXACTLY /inventory or /inventory/ (not /inventory/orders)
+                isActive = location.pathname === '/inventory' || location.pathname === '/inventory/';
+              } else {
+                // For other items, startsWith is fine
+                isActive = location.pathname.startsWith(item.path);
+              }
               return (
                 <Link
                   key={item.name}
