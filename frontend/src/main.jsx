@@ -7,10 +7,13 @@ import './index.css'
 // Import the root App component which contains all routes and pages
 import App from './App.jsx'
 
+import { Toaster } from 'react-hot-toast';
+
 // Find the HTML element with id="root" in index.html and render the React app into it
 // StrictMode wraps the app to highlight potential problems during development
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
+    <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
   </StrictMode>,
 )

@@ -27,6 +27,9 @@ import {
 // with status stats, action buttons, and navigation to other pages.
 // ============================================================
 
+// Import toast for notifications
+import toast from 'react-hot-toast';
+
 const ManagerDashboard = () => {
   // Get jobs data and operations from the shared context
   const { jobs, deleteJob, loading } = useJobs();
@@ -38,6 +41,9 @@ const ManagerDashboard = () => {
   const [statusFilter, setStatusFilter] = useState('All Status');
   // Dropdown filter for job priority (e.g., "High", "Urgent")
   const [priorityFilter, setPriorityFilter] = useState('All Priorities');
+  
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'desc' });
   
   const navigate = useNavigate();
   // Get the logged-in user's role and token from localStorage
@@ -51,15 +57,38 @@ const ManagerDashboard = () => {
     }
   }, [token, role, navigate]);
 
-  // Filter jobs whenever the search term, status filter, priority filter, or jobs data changes
-  useEffect(() => {
-    let result = jobs; // Start with all jobs
+  // Handle deletion with confirmation
+  const handleDeleteJob = async (jobId) => {
+    if (window.confirm('Are you sure you want to delete this job permanently? This action cannot be undone.')) {
+      try {
+        await deleteJob(jobId);
+        toast.success('Job deleted successfully');
+      } catch (error) {
+        toast.error('Failed to delete job');
+      }
+    }
+  };
 
-    // Apply text search filter — matches product name or team name
+  // Sorting handler
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Filter and sort jobs whenever necessary
+  useEffect(() => {
+    let result = [...jobs]; // Create a copy
+
+    // Apply text search filter — matches product name or team name or Job ID
     if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
       result = result.filter(job => 
-        job.product.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        job.team.toLowerCase().includes(searchTerm.toLowerCase())
+        job.product.toLowerCase().includes(lowerSearch) ||
+        job.team.toLowerCase().includes(lowerSearch) ||
+        job.id.toLowerCase().includes(lowerSearch)
       );
     }
 
@@ -73,13 +102,30 @@ const ManagerDashboard = () => {
       result = result.filter(job => job.priority === priorityFilter);
     }
 
+    // Apply sorting
+    result.sort((a, b) => {
+      let valA = a[sortConfig.key];
+      let valB = b[sortConfig.key];
+      
+      // Handle numeric/date sorting
+      if (sortConfig.key === 'progress' || sortConfig.key === 'quantity') {
+        valA = Number(valA);
+        valB = Number(valB);
+      }
+      
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
     setFilteredJobs(result); // Update the displayed jobs
-  }, [searchTerm, statusFilter, priorityFilter, jobs]);
+  }, [searchTerm, statusFilter, priorityFilter, jobs, sortConfig]);
 
   // Handle logout — clear all stored data and redirect to login
   const handleLogout = () => {
     localStorage.clear();     // Remove token, role, userId, userName
     navigate('/login');        // Redirect to login page
+    toast.success('Logged out successfully');
   };
 
   // Returns color scheme (background + text) for a given job status
@@ -159,10 +205,17 @@ const ManagerDashboard = () => {
           <div style={styles.statNumber}>{jobs.filter(j => j.status === 'Completed').length}</div>
           <div style={styles.statDesc}>Finished jobs</div>
         </div>
-        {/* Overdue jobs count (placeholder — always 0 currently) */}
+        {/* Overdue jobs count — calculated based on deadline and status */}
         <div style={styles.statCard}>
           <div style={styles.statCardHeader}><span style={styles.statTitle}>Overdue</span><AlertCircle size={20} color="#991b1b" /></div>
-          <div style={styles.statNumber}>0</div>
+          <div style={styles.statNumber}>
+            {jobs.filter(j => {
+              if (!j.deadline || j.status === 'Completed') return false;
+              const deadlineDate = new Date(j.deadline);
+              deadlineDate.setHours(23, 59, 59, 999);
+              return new Date() > deadlineDate;
+            }).length}
+          </div>
           <div style={styles.statDesc}>Past deadline</div>
         </div>
       </div>
@@ -218,14 +271,30 @@ const ManagerDashboard = () => {
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={styles.th}>Job ID</th>
-                <th style={styles.th}>Product</th>
-                <th style={styles.th}>Quantity</th>
-                <th style={styles.th}>Team</th>
-                <th style={styles.th}>Status</th>
-                <th style={styles.th}>Priority</th>
-                <th style={styles.th}>Progress</th>
-                <th style={styles.th}>Deadline</th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('id')}>
+                  Job ID {sortConfig.key === 'id' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('product')}>
+                  Product {sortConfig.key === 'product' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('quantity')}>
+                  Qty {sortConfig.key === 'quantity' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('team')}>
+                  Team {sortConfig.key === 'team' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('status')}>
+                  Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('priority')}>
+                  Priority {sortConfig.key === 'priority' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('progress')}>
+                  Progress {sortConfig.key === 'progress' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('deadline')}>
+                  Deadline {sortConfig.key === 'deadline' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
                 <th style={styles.th}>Actions</th>
               </tr>
             </thead>
@@ -267,7 +336,7 @@ const ManagerDashboard = () => {
                       {/* Edit job details */}
                       <button style={styles.actionBtn} title="Edit" onClick={() => navigate(`/jobs/${job.id}/edit`)}><Edit2 size={16} color="#4b5563" /></button>
                       {/* Delete job permanently */}
-                      <button style={styles.actionBtn} title="Delete" onClick={() => deleteJob(job.id)}><Trash2 size={16} color="#ef4444" /></button>
+                      <button style={styles.actionBtn} title="Delete" onClick={() => handleDeleteJob(job.id)}><Trash2 size={16} color="#ef4444" /></button>
                     </div>
                   </td>
                 </tr>

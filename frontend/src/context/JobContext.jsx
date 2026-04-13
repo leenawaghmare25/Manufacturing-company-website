@@ -2,12 +2,14 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 // Import axios for making HTTP API requests to the backend
 import axios from 'axios';
+// Import toast for notifications
+import toast from 'react-hot-toast';
 
 // Create a React Context — this is a way to share data across components without prop drilling
 // Any component wrapped in JobProvider can access this context's values
 const JobContext = createContext();
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://manufacturing-company-job-mgmt-module.onrender.com/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 // Custom hook — makes it easy to access the JobContext from any component
 // Usage: const { jobs, addJob, updateJob } = useJobs();
@@ -17,39 +19,48 @@ export const useJobs = () => useContext(JobContext);
 export const JobProvider = ({ children }) => {
   // State for storing the array of manufacturing jobs fetched from the backend
   const [jobs, setJobs] = useState([]);
+  // State for storing pagination metadata
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 0 });
   // State for storing quality check records
   const [qcRecords, setQCRecords] = useState([]);
   // Loading state — true while initial data is being fetched
   const [loading, setLoading] = useState(true);
 
-  // useEffect runs once when the component mounts (empty dependency array would cause this,
-  // but we intentionally fetch on mount only)
-  useEffect(() => {
-    // Async function to fetch initial data from the backend
-    const fetchData = async () => {
-      try {
-        // Get the JWT token from localStorage (set during login)
-        const token = localStorage.getItem('token');
-        if (token) {
-          // Create the authorization header config for API requests
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          // Fetch both jobs and QC records simultaneously using Promise.all
-          // This is faster than fetching them one after another
-          const [jobsRes, qcRes] = await Promise.all([
-            axios.get(`${API_BASE}/jobs`, config),      // Fetch all jobs
-            axios.get(`${API_BASE}/qc`, config).catch(() => ({ data: [] })) // Fetch QC records (fallback to empty array on error)
-          ]);
-          setJobs(jobsRes.data);       // Store the fetched jobs in state
-          setQCRecords(qcRes.data);    // Store the fetched QC records in state
+  // Function to fetch data — now supports params for pagination and search
+  const fetchData = async (params = {}) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const config = { 
+          headers: { Authorization: `Bearer ${token}` },
+          params: { limit: 1000, ...params } // Default to high limit for now, allow overrides
+        };
+        
+        const [jobsRes, qcRes] = await Promise.all([
+          axios.get(`${API_BASE}/jobs`, config),
+          axios.get(`${API_BASE}/qc`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] }))
+        ]);
+        
+        // Handle paginated or non-paginated response gracefully
+        if (jobsRes.data.jobs) {
+          setJobs(jobsRes.data.jobs);
+          setPagination(jobsRes.data.pagination);
+        } else {
+          setJobs(jobsRes.data);
         }
-      } catch (error) {
-        console.error('Error fetching data:', error); // Log any errors
-      } finally {
-        setLoading(false); // Mark loading as complete regardless of success/failure
+        
+        setQCRecords(qcRes.data);
       }
-    };
-    fetchData(); // Call the fetch function
-  }, []); // Empty dependency array = runs only once on mount
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   // ADD JOB — Creates a new job via the backend API and adds it to local state
   const addJob = async (jobData) => {
@@ -61,12 +72,13 @@ export const JobProvider = ({ children }) => {
           headers: { Authorization: `Bearer ${token}` }
         });
         // Add the newly created job to the local state array
-        // Using functional update (prev =>) to safely update based on previous state
         setJobs(prev => [...prev, response.data.job]);
+        toast.success('Job created successfully!');
         return response.data.job; // Return the created job for the caller to use
       }
     } catch (error) {
       console.error('Error creating job:', error);
+      toast.error('Failed to create job.');
       throw error; // Re-throw so the calling component can handle the error
     }
   };
@@ -80,12 +92,13 @@ export const JobProvider = ({ children }) => {
         await axios.put(`${API_BASE}/jobs/${id}`, updatedData, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        // Update the job in local state by mapping through all jobs
-        // and merging the updated data into the matching job
+        // Update the job in local state
         setJobs(prev => prev.map(job => job.id === id ? { ...job, ...updatedData } : job));
+        toast.success('Job updated successfully!');
       }
     } catch (error) {
       console.error('Error updating job:', error);
+      toast.error('Failed to update job.');
       throw error;
     }
   };
@@ -123,10 +136,12 @@ export const JobProvider = ({ children }) => {
         });
         // Add the new record to the beginning of the local state array (newest first)
         setQCRecords(prev => [response.data.record, ...prev]);
+        toast.success('Quality check record saved!');
         return response.data.record;
       }
     } catch (error) {
       console.error('Error adding QC Record:', error);
+      toast.error('Failed to save quality check.');
       throw error;
     }
   };

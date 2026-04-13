@@ -1,5 +1,4 @@
-// Import React and useState hook for form state management
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 // Import useNavigate for redirecting after job creation
 import { useNavigate } from 'react-router-dom';
 // Import the useJobs hook to access the addJob function from JobContext
@@ -17,6 +16,10 @@ const CreateJob = () => {
   const navigate = useNavigate();   // Hook for page navigation
   const { addJob } = useJobs();     // Get the addJob function from the shared context
 
+  // Local state for teams fetched from the backend
+  const [availableTeams, setAvailableTeams] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Form data state — stores all the fields for a new job
   const [formData, setFormData] = useState({
     product: '',          // Product name (e.g., "Circuit Board A")
@@ -25,17 +28,69 @@ const CreateJob = () => {
     status: 'Created',     // Initial status — always starts as "Created"
     priority: 'Medium',    // Default priority level
     progress: 0,           // Initial progress — starts at 0%
-    deadline: ''           // Manufacturing deadline date
+    deadline: '',          // Manufacturing deadline date
+    notes: '',             // Special instructions or notes
+    parts: []              // List of components for the job
   });
+
+  // Fetch teams from the backend when the component mounts
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+        const response = await fetch(`${API_BASE}/teams`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableTeams(data);
+        }
+      } catch (error) {
+        console.error('Error fetching teams:', error);
+      }
+    };
+    fetchTeams();
+  }, []);
+
+  // Handle part addition
+  const addPartField = () => {
+    setFormData({
+      ...formData,
+      parts: [...formData.parts, { name: '', requiredQty: '' }]
+    });
+  };
+
+  // Handle part removal
+  const removePartField = (index) => {
+    const newParts = [...formData.parts];
+    newParts.splice(index, 1);
+    setFormData({ ...formData, parts: newParts });
+  };
+
+  // Handle part change
+  const handlePartChange = (index, field, value) => {
+    const newParts = [...formData.parts];
+    newParts[index][field] = value;
+    setFormData({ ...formData, parts: newParts });
+  };
 
   // Handle form submission — creates the job via API and redirects to dashboard
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent default form submission (page reload)
+    
+    // Prevent double submission
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
     try {
       await addJob(formData);             // Call the addJob function from JobContext
       navigate('/manager-dashboard');      // Redirect to the manager dashboard on success
     } catch (error) {
       console.error('Error creating job:', error); // Log any errors
+      alert('Failed to create job. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -89,10 +144,9 @@ const CreateJob = () => {
                 required
               >
                 <option value="">Select Team</option>
-                <option value="Team Alpha">Team Alpha</option>
-                <option value="Team Beta">Team Beta</option>
-                <option value="Team Gamma">Team Gamma</option>
-                <option value="Team Delta">Team Delta</option>
+                {availableTeams.map(t => (
+                  <option key={t.id} value={t.name}>{t.name}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -124,12 +178,53 @@ const CreateJob = () => {
             </div>
           </div>
 
+          {/* Notes section */}
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Special Instructions / Notes</label>
+            <textarea 
+              placeholder="Enter any special handling instructions..." 
+              style={styles.textarea}
+              value={formData.notes}
+              onChange={(e) => setFormData({...formData, notes: e.target.value})}
+            />
+          </div>
+
+          {/* Parts / Components Section */}
+          <div style={styles.partsSection}>
+            <div style={styles.partsHeader}>
+              <label style={styles.label}>Manufacturing Components (Optional)</label>
+              <button type="button" onClick={addPartField} style={styles.addPartBtn}>+ Add Component</button>
+            </div>
+            
+            {formData.parts.map((part, index) => (
+              <div key={index} style={styles.partRow}>
+                <input 
+                  type="text" 
+                  placeholder="Component Name (e.g. Screen)" 
+                  style={{ ...styles.input, flex: 2 }}
+                  value={part.name}
+                  onChange={(e) => handlePartChange(index, 'name', e.target.value)}
+                  required
+                />
+                <input 
+                  type="number" 
+                  placeholder="Qty" 
+                  style={{ ...styles.input, flex: 1 }}
+                  value={part.requiredQty}
+                  onChange={(e) => handlePartChange(index, 'requiredQty', e.target.value)}
+                  required
+                />
+                <button type="button" onClick={() => removePartField(index)} style={styles.removePartBtn}>×</button>
+              </div>
+            ))}
+          </div>
+
           {/* Action buttons — Cancel and Create Job */}
           <div style={styles.buttonGroup} className="stack-on-mobile">
-            {/* Cancel button — navigates back without creating the job */}
-            <button type="button" onClick={() => navigate('/manager-dashboard')} style={styles.cancelBtn} className="full-width-on-mobile">Cancel</button>
-            {/* Submit button — creates the job */}
-            <button type="submit" style={styles.submitBtn} className="full-width-on-mobile">Create Job</button>
+            <button type="button" onClick={() => navigate('/manager-dashboard')} style={styles.cancelBtn} className="full-width-on-mobile" disabled={isSubmitting}>Cancel</button>
+            <button type="submit" style={{ ...styles.submitBtn, opacity: isSubmitting ? 0.7 : 1 }} className="full-width-on-mobile" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating Job...' : 'Create Job'}
+            </button>
           </div>
         </form>
       </div>
@@ -151,7 +246,13 @@ const styles = {
   inputGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },     // Label + input pair
   label: { fontSize: '14px', fontWeight: '600', color: '#374151' },
   input: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', fontSize: '14px' },
+  textarea: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', fontSize: '14px', minHeight: '80px', fontFamily: 'inherit' },
   select: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', fontSize: '14px', backgroundColor: 'white' },
+  partsSection: { display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px', backgroundColor: '#f9fafb', borderRadius: '12px', border: '1px solid #f3f4f6' },
+  partsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  addPartBtn: { padding: '4px 12px', borderRadius: '6px', border: '1px solid #2563eb', color: '#2563eb', backgroundColor: 'transparent', fontSize: '12px', fontWeight: '700', cursor: 'pointer' },
+  partRow: { display: 'flex', gap: '12px', alignItems: 'center' },
+  removePartBtn: { width: '30px', height: '30px', borderRadius: '6px', border: 'none', backgroundColor: '#fee2e2', color: '#ef4444', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' },
   buttonGroup: { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' },
   cancelBtn: { padding: '12px 24px', borderRadius: '8px', border: '1px solid #d1d5db', backgroundColor: 'white', color: '#4b5563', fontWeight: '600', cursor: 'pointer' },
   submitBtn: { padding: '12px 24px', borderRadius: '8px', border: 'none', backgroundColor: '#2563eb', color: 'white', fontWeight: '600', cursor: 'pointer' }

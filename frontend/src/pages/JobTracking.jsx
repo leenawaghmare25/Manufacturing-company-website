@@ -38,16 +38,12 @@ const JobTracking = () => {
   // Define the manufacturing process stages in order
   const stages = ['Created', 'Production', 'Assembly', 'Quality Check', 'Completed'];
   
-  // Mock part data for the part-wise progress table (placeholder)
-  const mockParts = [
-    { name: 'Core Processing Unit', required: 100, completed: 45, status: 'In Progress' },
-    { name: 'Power Regulation Module', required: 50, completed: 50, status: 'Completed' },
-    { name: 'External Housing Assembly', required: 200, completed: 0, status: 'Pending' }
-  ];
+  // Real part data from the job object (fetched from backend)
+  const jobParts = job.parts || [];
 
   // Handle stage change — updates the job status and auto-calculates progress
   // Only managers are allowed to change the stage
-  const handleStageChange = (newStage) => {
+  const handleStageChange = async (newStage) => {
     if (!isManager) return; // Block if the user is not a manager
     
     // Map each stage to an approximate progress percentage
@@ -59,11 +55,24 @@ const JobTracking = () => {
       'Completed': 100
     };
 
-    // Update the job's status and progress in the database
-    updateJob(job.id, { 
-      status: newStage, 
-      progress: stageProgress[newStage] || job.progress 
-    });
+    try {
+      // Update the job's status and progress in the database
+      await updateJob(job.id, { 
+        status: newStage, 
+        progress: stageProgress[newStage] || job.progress 
+      });
+    } catch (error) {
+      console.error('Failed to update stage:', error);
+    }
+  };
+
+  // Check if a job is overdue (deadline was yesterday or earlier)
+  const isOverdue = () => {
+    if (!job.deadline || job.status === 'Completed') return false;
+    const deadlineDate = new Date(job.deadline);
+    // Set to end of the day for the "fixed time" requirement
+    deadlineDate.setHours(23, 59, 59, 999);
+    return new Date() > deadlineDate;
   };
 
   // Return color scheme for a given priority level (used for priority badges)
@@ -90,7 +99,24 @@ const JobTracking = () => {
             <span>Back to Dashboard</span>
           </button>
           <div style={styles.headerTitleGroup}>
-            <h1 style={styles.title}>Job Tracking: {job.id}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <h1 style={styles.title}>Job Tracking: {job.id}</h1>
+              {isOverdue() && (
+                <span style={{ 
+                  backgroundColor: '#fee2e2', 
+                  color: '#ef4444', 
+                  padding: '4px 12px', 
+                  borderRadius: '6px', 
+                  fontSize: '12px', 
+                  fontWeight: '700',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  <AlertTriangle size={14} /> OVERDUE
+                </span>
+              )}
+            </div>
             <p style={styles.subtitle}>Monitor job progress and process stages</p>
           </div>
         </div>
@@ -154,7 +180,7 @@ const JobTracking = () => {
             
             <div style={styles.notesSection}>
               <Info size={14} color="#3b82f6" />
-              <p style={styles.notesText}>Production scheduled after material verification. Special handling required.</p>
+              <p style={styles.notesText}>{job.notes || 'No special handling notes provided for this job.'}</p>
             </div>
           </div>
 
@@ -233,18 +259,18 @@ const JobTracking = () => {
                 </tr>
               </thead>
               <tbody>
-                {mockParts.map((part) => (
-                  <tr key={part.name} style={styles.tr}>
+                {jobParts.length > 0 ? jobParts.map((part) => (
+                  <tr key={part.id || part.name} style={styles.tr}>
                     <td style={styles.tdBold}>{part.name}</td>
-                    <td style={styles.td}>{part.required}</td>
-                    <td style={styles.td}>{part.completed}</td>
+                    <td style={styles.td}>{part.requiredQty}</td>
+                    <td style={styles.td}>{part.completedQty || 0}</td>
                     <td style={styles.td}>
                       <span style={{
                         ...styles.tableBadge,
-                        backgroundColor: part.status === 'Completed' ? '#dcfce7' : (part.status === 'In Progress' ? '#dbeafe' : '#f3f4f6'),
-                        color: part.status === 'Completed' ? '#166534' : (part.status === 'In Progress' ? '#1e40af' : '#4b5563')
+                        backgroundColor: (part.completedQty >= part.requiredQty) ? '#dcfce7' : (part.completedQty > 0 ? '#dbeafe' : '#f3f4f6'),
+                        color: (part.completedQty >= part.requiredQty) ? '#166534' : (part.completedQty > 0 ? '#1e40af' : '#4b5563')
                       }}>
-                        {part.status}
+                        {part.completedQty >= part.requiredQty ? 'Completed' : (part.completedQty > 0 ? 'In Progress' : 'Pending')}
                       </span>
                     </td>
                     <td style={styles.td}>
@@ -252,15 +278,21 @@ const JobTracking = () => {
                         <div style={styles.tableProgressBg}>
                           <div style={{
                             ...styles.tableProgressFill, 
-                            width: `${(part.completed/part.required)*100}%`,
-                            backgroundColor: part.status === 'Completed' ? '#22c55e' : '#3b82f6'
+                            width: `${Math.min((part.completedQty / part.requiredQty) * 100, 100)}%`,
+                            backgroundColor: (part.completedQty >= part.requiredQty) ? '#22c55e' : '#3b82f6'
                           }}></div>
                         </div>
-                        <span style={styles.tableProgressText}>{Math.round((part.completed/part.required)*100)}%</span>
+                        <span style={styles.tableProgressText}>{Math.round(Math.min((part.completedQty / part.requiredQty) * 100, 100))}%</span>
                       </div>
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan="5" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>
+                      No components defined for this job.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -283,7 +315,7 @@ const JobTracking = () => {
                 <Calendar size={16} color="#9ca3af" />
                 <div>
                   <span style={styles.infoLabel}>Created Date</span>
-                  <span style={styles.infoValue}>2026-03-25</span>
+                  <span style={styles.infoValue}>{new Date(job.created_at || Date.now()).toLocaleDateString()}</span>
                 </div>
               </div>
               <div style={styles.infoItem}>
@@ -296,13 +328,27 @@ const JobTracking = () => {
             </div>
           </div>
 
-          <div style={styles.alertCard}>
+          <div style={{
+            ...styles.alertCard,
+            backgroundColor: isOverdue() ? '#fee2e2' : '#fef3c7',
+            borderColor: isOverdue() ? '#ef4444' : '#f59e0b'
+          }}>
             <div style={styles.alertHeader}>
-              <AlertTriangle size={18} color="#f59e0b" />
-              <span style={styles.alertTitle}>Alerts / Issues</span>
+              <AlertTriangle size={18} color={isOverdue() ? "#ef4444" : "#f59e0b"} />
+              <span style={{
+                ...styles.alertTitle,
+                color: isOverdue() ? "#991b1b" : "#92400e"
+              }}>{isOverdue() ? "Critical Alert" : "Job Alerts"}</span>
             </div>
-            <p style={styles.alertText}>Production delayed by 2 hours due to material shortage in Section B.</p>
-            <span style={styles.alertTime}>Updated 15 mins ago</span>
+            <p style={{
+              ...styles.alertText,
+              color: isOverdue() ? "#b91c1c" : "#b45309"
+            }}>
+              {isOverdue() 
+                ? "This job has passed its deadline. Immediate attention required to complete pending tasks."
+                : (job.alert || "No active issues reported. Production is following the standard schedule.")}
+            </p>
+            {job.updated_at && <span style={styles.alertTime}>Updated {new Date(job.updated_at).toLocaleTimeString()}</span>}
           </div>
         </div>
       </div>

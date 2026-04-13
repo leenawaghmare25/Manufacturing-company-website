@@ -7,25 +7,59 @@ const pool = require('../config/dbPromise');
 // team assignments, statuses, priorities, and deadlines
 // ============================================================
 
-// GET ALL JOBS — Fetches every job from the database along with their parts
-// Called when GET /api/jobs is hit
+// GET ALL JOBS — Fetches jobs from the database with pagination and search
+// Called when GET /api/jobs is hit (e.g., /api/jobs?page=1&limit=10&search=A)
 exports.getJobs = async (req, res) => {
   try {
-    // Fetch all jobs from the jobs table
-    const [jobs] = await pool.query('SELECT * FROM jobs');
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 1000; // High limit by default for now
+    const search = req.query.search || '';
+    const offset = (page - 1) * limit;
+
+    let query = 'SELECT * FROM jobs';
+    let countQuery = 'SELECT COUNT(*) as total FROM jobs';
+    let queryParams = [];
+    let countParams = [];
+
+    // Apply search filter if provided
+    if (search) {
+      const searchPattern = `%${search}%`;
+      const filter = ' WHERE product LIKE ? OR team LIKE ? OR id LIKE ?';
+      query += filter;
+      countQuery += filter;
+      queryParams = [searchPattern, searchPattern, searchPattern];
+      countParams = [searchPattern, searchPattern, searchPattern];
+    }
+
+    // Add sorting (newest first by default) and pagination
+    query += ' ORDER BY createdAt DESC LIMIT ? OFFSET ?';
+    queryParams.push(limit, offset);
+
+    // Execute queries in parallel
+    const [[jobs], [[{ total }]]] = await Promise.all([
+      pool.query(query, queryParams),
+      pool.query(countQuery, countParams)
+    ]);
     
     // For each job, also fetch its associated parts from the job_parts table
-    // This builds a complete job object that the frontend expects
     for (let job of jobs) {
       const [parts] = await pool.query('SELECT * FROM job_parts WHERE jobId = ?', [job.id]);
-      job.parts = parts; // Attach the parts array to each job object
+      job.parts = parts;
     }
     
-    // Return the array of jobs (each with its parts included)
-    res.json(jobs);
+    // Return jobs with pagination metadata
+    res.json({
+      jobs,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
-    console.error('Error fetching jobs:', error); // Log the error for debugging
-    res.status(500).json({ message: 'Error fetching jobs' }); // Return 500 error to client
+    console.error('Error fetching jobs:', error);
+    res.status(500).json({ message: 'Error fetching jobs' });
   }
 };
 
@@ -42,10 +76,10 @@ exports.createJob = async (req, res) => {
   const progress = jobData.progress || 0;           // Initial progress is 0%
   
   try {
-    // Insert the new job into the jobs table
+    // Insert the new job into the jobs table (added 'notes' and 'alert')
     await pool.query(
-      'INSERT INTO jobs (id, product, quantity, team, status, priority, progress, deadline) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [newJobId, jobData.product, jobData.quantity, jobData.team, status, priority, progress, jobData.deadline]
+      'INSERT INTO jobs (id, product, quantity, team, status, priority, progress, deadline, notes, alert) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [newJobId, jobData.product, jobData.quantity, jobData.team, status, priority, progress, jobData.deadline, jobData.notes || '', '']
     );
 
     // Insert any parts associated with this job into the job_parts table
@@ -90,7 +124,7 @@ exports.updateJob = async (req, res) => {
     const values = [];          // Array of corresponding values
 
     // List of fields that are allowed to be updated
-    const updatableFields = ['product', 'quantity', 'team', 'status', 'priority', 'progress', 'deadline'];
+    const updatableFields = ['product', 'quantity', 'team', 'status', 'priority', 'progress', 'deadline', 'notes', 'alert'];
     for (const field of updatableFields) {
       // Only include fields that were actually provided in the request
       if (updatedData[field] !== undefined) {
