@@ -50,6 +50,7 @@ const initializeTables = async () => {
         courier_details  VARCHAR(255),
         tracking_number  VARCHAR(100),
         remarks          TEXT,
+        deadline         DATE,
         created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
@@ -85,6 +86,8 @@ const initializeTables = async () => {
         email      VARCHAR(100),
         phone      VARCHAR(20),
         address    TEXT,
+        order_count INT DEFAULT 0,
+        total_spent DECIMAL(10,2) DEFAULT 0.00,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);

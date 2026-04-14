@@ -23,6 +23,8 @@ export const JobProvider = ({ children }) => {
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 0 });
   // State for storing quality check records
   const [qcRecords, setQCRecords] = useState([]);
+  // State for storing orders that can be converted to jobs
+  const [pendingOrders, setPendingOrders] = useState([]);
   // Loading state — true while initial data is being fetched
   const [loading, setLoading] = useState(true);
 
@@ -60,7 +62,23 @@ export const JobProvider = ({ children }) => {
 
   useEffect(() => {
     fetchData();
+    fetchPendingOrders(); // Also fetch pending orders on load
   }, []);
+
+  // FETCH PENDING ORDERS — Gets confirmed orders from OMS ready for job conversion
+  const fetchPendingOrders = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const response = await axios.get(`${API_BASE}/jobs/pending-orders`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setPendingOrders(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching pending orders:', error);
+    }
+  };
 
   // ADD JOB — Creates a new job via the backend API and adds it to local state
   const addJob = async (jobData) => {
@@ -160,7 +178,9 @@ export const JobProvider = ({ children }) => {
       getJobById,             // Function to find a job by its ID
       qcRecords,              // Array of all quality check records
       addQCRecord,            // Function to create a new QC record
-      getQCRecordsByJobId     // Function to filter QC records by job ID
+      getQCRecordsByJobId,    // Function to filter QC records by job ID
+      pendingOrders,          // Array of confirmed orders ready for conversion
+      fetchPendingOrders      // Function to refresh pending orders list
     }}>
       {children}  {/* Render all child components inside the provider */}
     </JobContext.Provider>

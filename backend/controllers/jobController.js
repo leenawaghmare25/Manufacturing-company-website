@@ -63,6 +63,27 @@ exports.getJobs = async (req, res) => {
   }
 };
 
+// GET PENDING ORDERS — Fetches confirmed orders that haven't been converted to jobs
+// Called when GET /api/jobs/pending-orders is hit
+exports.getPendingOrders = async (req, res) => {
+  try {
+    // Select all confirmed orders that are NOT yet linked to any job
+    const query = `
+      SELECT o.id as orderId, o.customer_name, o.item_name, o.quantity, o.priority, o.deadline, o.created_at
+      FROM orders o
+      LEFT JOIN jobs j ON o.id = j.orderId
+      WHERE o.status = 'confirmed' AND j.orderId IS NULL
+      ORDER BY o.created_at ASC
+    `;
+    
+    const [orders] = await pool.query(query);
+    res.json(orders);
+  } catch (error) {
+    console.error('Error fetching pending orders:', error);
+    res.status(500).json({ message: 'Error fetching pending orders' });
+  }
+};
+
 // CREATE JOB — Creates a new manufacturing job in the database
 // Called when POST /api/jobs is hit
 exports.createJob = async (req, res) => {
@@ -76,11 +97,22 @@ exports.createJob = async (req, res) => {
   const progress = jobData.progress || 0;           // Initial progress is 0%
   
   try {
-    // Insert the new job into the jobs table (added 'notes' and 'alert')
+    // Insert the new job into the jobs table (added 'notes', 'alert', and 'orderId')
     await pool.query(
-      'INSERT INTO jobs (id, product, quantity, team, status, priority, progress, deadline, notes, alert) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [newJobId, jobData.product, jobData.quantity, jobData.team, status, priority, progress, jobData.deadline, jobData.notes || '', '']
+      'INSERT INTO jobs (id, product, quantity, team, status, priority, progress, deadline, notes, alert, orderId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [newJobId, jobData.product, jobData.quantity, jobData.team, status, priority, progress, jobData.deadline, jobData.notes || '', '', jobData.orderId || null]
     );
+
+    // If this job was created from an order, update the original order's status to 'processing'
+    if (jobData.orderId) {
+      await pool.query('UPDATE orders SET status = "processing" WHERE id = ?', [jobData.orderId]);
+      
+      // Also log the history for the order
+      await pool.query('INSERT INTO order_history (order_id, status, remarks) VALUES (?, ?, ?)', 
+        [jobData.orderId, 'processing', `Job created: ${newJobId}`]);
+      
+      console.log(`Syncing status for order ${jobData.orderId} to 'processing'`);
+    }
 
     // Insert any parts associated with this job into the job_parts table
     const parts = jobData.parts || []; // Default to empty array if no parts provided

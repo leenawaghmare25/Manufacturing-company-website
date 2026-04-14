@@ -76,7 +76,8 @@ router.post('/', async (req, res) => {
   const { 
     customer_name, email, phone, address, 
     item_name, quantity, price, status, priority, 
-    shipping_method, courier_details, tracking_number, remarks 
+    shipping_method, courier_details, tracking_number, remarks,
+    deadline
   } = req.body;
 
 
@@ -87,13 +88,15 @@ router.post('/', async (req, res) => {
     INSERT INTO orders (
       customer_name, email, mobile_number, delivery_address, 
       item_name, quantity, price, status, priority, 
-      shipping_method, courier_details, tracking_number, remarks
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+      shipping_method, courier_details, tracking_number, remarks,
+      deadline
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `;
   const params = [
     customer_name, email, phone || '', address || '', 
     item_name, quantity, price, status || 'new', priority || 'medium', 
-    shipping_method, courier_details, tracking_number, remarks
+    shipping_method, courier_details, tracking_number, remarks,
+    deadline || null
   ];
 
 
@@ -157,7 +160,8 @@ router.put('/:id', async (req, res) => {
   const { 
     customer_name, email, phone, address, 
     item_name, quantity, price, status, priority, 
-    shipping_method, courier_details, tracking_number, remarks 
+    shipping_method, courier_details, tracking_number, remarks,
+    deadline
   } = req.body;
 
 
@@ -165,13 +169,15 @@ router.put('/:id', async (req, res) => {
     UPDATE orders SET 
       customer_name=?, email=?, mobile_number=?, delivery_address=?, 
       item_name=?, quantity=?, price=?, status=?, priority=?, 
-      shipping_method=?, courier_details=?, tracking_number=?, remarks=?
+      shipping_method=?, courier_details=?, tracking_number=?, remarks=?,
+      deadline=?
     WHERE id=?
   `;
   const params = [
     customer_name, email, phone || '', address || '', 
     item_name, quantity, price, status, priority, 
     shipping_method, courier_details, tracking_number, remarks,
+    deadline,
     req.params.id
   ];
 

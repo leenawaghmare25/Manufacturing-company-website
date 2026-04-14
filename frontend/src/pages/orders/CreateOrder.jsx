@@ -50,6 +50,7 @@ export default function CreateOrder() {
     priority: 'Medium',
     status: 'New',
     shipping_method: 'Standard Delivery',
+    deadline: '',
     remarks: ''
   });
 
@@ -60,7 +61,8 @@ export default function CreateOrder() {
         ...editingOrder,
         date: editingOrder.created_at ? new Date(editingOrder.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         priority: editingOrder.priority?.charAt(0).toUpperCase() + editingOrder.priority?.slice(1) || 'Medium',
-        status: editingOrder.status?.charAt(0).toUpperCase() + editingOrder.status?.slice(1) || 'New'
+        status: editingOrder.status?.charAt(0).toUpperCase() + editingOrder.status?.slice(1) || 'New',
+        deadline: editingOrder.deadline ? new Date(editingOrder.deadline).toISOString().split('T')[0] : ''
       });
     }
   }, [editingOrder]);
@@ -205,14 +207,24 @@ export default function CreateOrder() {
                 onChange={e => setForm({...form, item_name: e.target.value})} 
               />
 
-              <InputField 
-                label="Order Date" 
-                icon={Calendar} 
-                type="date" 
-                required 
-                value={form.date} 
-                onChange={e => setForm({...form, date: e.target.value})} 
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InputField 
+                  label="Order Date" 
+                  icon={Calendar} 
+                  type="date" 
+                  required 
+                  value={form.date} 
+                  onChange={e => setForm({...form, date: e.target.value})} 
+                />
+                <InputField 
+                  label="Production Deadline" 
+                  icon={Calendar} 
+                  type="date" 
+                  required 
+                  value={form.deadline} 
+                  onChange={e => setForm({...form, deadline: e.target.value})} 
+                />
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <InputField 

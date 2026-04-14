@@ -9,6 +9,8 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 // GET /api/jobs — Fetch all manufacturing jobs (with their parts)
 router.get('/', authMiddleware, jobController.getJobs);
+// GET /api/jobs/pending-orders — Fetch orders ready for production
+router.get('/pending-orders', authMiddleware, jobController.getPendingOrders);
 // POST /api/jobs — Create a new manufacturing job
 router.post('/', authMiddleware, jobController.createJob);
 // PUT /api/jobs/:id — Update an existing job (status, progress, etc.)

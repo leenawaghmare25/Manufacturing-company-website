@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-// Import useNavigate for redirecting after job creation
-import { useNavigate } from 'react-router-dom';
+// Import useNavigate and useLocation for routing and state access
+import { useNavigate, useLocation } from 'react-router-dom';
 // Import the useJobs hook to access the addJob function from JobContext
 import { useJobs } from '../../context/JobContext';
 // Import the back arrow icon for the navigation button
@@ -14,7 +14,8 @@ import { ArrowLeft } from 'lucide-react';
 
 const CreateJob = () => {
   const navigate = useNavigate();   // Hook for page navigation
-  const { addJob } = useJobs();     // Get the addJob function from the shared context
+  const location = useLocation();   // Hook to access navigation state (for pre-filling)
+  const { addJob, fetchPendingOrders } = useJobs();     // Get functions from context
 
   // Local state for teams fetched from the backend
   const [availableTeams, setAvailableTeams] = useState([]);
@@ -30,8 +31,34 @@ const CreateJob = () => {
     progress: 0,           // Initial progress — starts at 0%
     deadline: '',          // Manufacturing deadline date
     notes: '',             // Special instructions or notes
-    parts: []              // List of components for the job
+    parts: [],             // List of components for the job
+    orderId: null          // Source Order ID (if applicable)
   });
+
+  // Effect to handle incoming state from the Dashboard (conversion from Order)
+  useEffect(() => {
+    if (location.state && location.state.fromOrder) {
+      const order = location.state.fromOrder;
+      
+      // Parse priority to match Job Management casing
+      const priorityMap = {
+        'urgent': 'Urgent',
+        'high': 'High',
+        'medium': 'Medium',
+        'low': 'Low'
+      };
+
+      setFormData(prev => ({
+        ...prev,
+        product: order.item_name,
+        quantity: order.quantity,
+        priority: priorityMap[order.priority] || 'Medium',
+        deadline: order.deadline ? new Date(order.deadline).toISOString().split('T')[0] : '',
+        orderId: order.orderId,
+        notes: `Automatically generated from Order #${order.orderId} for ${order.customer_name}.`
+      }));
+    }
+  }, [location]);
 
   // Fetch teams from the backend when the component mounts
   useEffect(() => {
@@ -85,6 +112,7 @@ const CreateJob = () => {
     setIsSubmitting(true);
     try {
       await addJob(formData);             // Call the addJob function from JobContext
+      await fetchPendingOrders();         // Refresh the pending orders list
       navigate('/jobs');      // Redirect to the manager dashboard on success
     } catch (error) {
       console.error('Error creating job:', error); // Log any errors
@@ -103,7 +131,9 @@ const CreateJob = () => {
           <ArrowLeft size={20} />
           <span>Back to Dashboard</span>
         </button>
-        <h1 style={styles.title}>Create New Job</h1>
+        <h1 style={styles.title}>
+          {formData.orderId ? `Convert Order #${formData.orderId} to Job` : 'Create New Job'}
+        </h1>
       </header>
 
       {/* Form card */}
