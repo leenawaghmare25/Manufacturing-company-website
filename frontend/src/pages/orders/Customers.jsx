@@ -1,27 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Users, DollarSign, TrendingUp, Search, Plus, UserPlus, Eye, Trash2 } from 'lucide-react';
 import API from '../../api/api';
 import TopHeader from '../../components/TopHeader';
-
-
-
-
-function StatCard({ label, value, sub, icon, color }) {
-  return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex justify-between items-start">
-      <div>
-        <div className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-2">{label}</div>
-        <div className="text-3xl font-bold text-gray-900">{value}</div>
-        <div className="text-xs text-gray-400 mt-2">{sub}</div>
-      </div>
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl bg-${color}-50 text-${color}-600`}>{icon}</div>
-    </div>
-  );
-}
+import StatCard from '../../components/common/StatCard';
+import DataTable from '../../components/common/DataTable';
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   const fetchData = () => {
     setLoading(true);
@@ -30,7 +18,6 @@ export default function Customers() {
       .catch(console.error)
       .finally(() => setLoading(false));
   };
-
 
   useEffect(() => { fetchData(); }, []);
 
@@ -44,82 +31,125 @@ export default function Customers() {
     }
   };
 
-
+  const filteredCustomers = customers.filter(c => 
+    c.name.toLowerCase().includes(search.toLowerCase()) || 
+    c.email?.toLowerCase().includes(search.toLowerCase())
+  );
 
   const totalSpent = customers.reduce((sum, c) => sum + Number(c.total_spent || 0), 0);
+
+  const tableHeaders = [
+    { key: 'customer', label: 'Customer' },
+    { key: 'contact', label: 'Contact Information' },
+    { key: 'orders', label: 'Orders', align: 'center' },
+    { key: 'ltv', label: 'Lifetime Value' },
+    { key: 'actions', label: 'Actions', align: 'right' },
+  ];
 
   return (
     <div className="max-w-screen-xl mx-auto px-6 py-8">
       <TopHeader 
         title="Customers Directory"
-        subtitle="Manage and monitor customer relationships and spend"
+        subtitle="Manage and monitor customer relationships and lifetime spend analytics"
       />
 
-
-
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <StatCard label="Total Customers" value={customers.length} sub="Active in database" icon="👥" color="blue" />
-        <StatCard label="Revenue Share" value={`₹${totalSpent.toLocaleString('en-IN')}`} sub="Cumulative lifetime value" icon="💰" color="green" />
-        <StatCard label="Average LTV" value={`₹${(totalSpent / (customers.length || 1)).toLocaleString('en-IN')}`} sub="Per unique customer" icon="📈" color="purple" />
+        <StatCard 
+          title="Total Customers" 
+          value={customers.length} 
+          description="Active in database" 
+          icon={Users} 
+          iconColor="#3b82f6" 
+        />
+        <StatCard 
+          title="Revenue Share" 
+          value={`₹${totalSpent.toLocaleString('en-IN')}`} 
+          description="Cumulative lifetime value" 
+          icon={DollarSign} 
+          iconColor="#10b981" 
+        />
+        <StatCard 
+          title="Average LTV" 
+          value={`₹${(totalSpent / (customers.length || 1)).toLocaleString('en-IN')}`} 
+          description="Per unique customer" 
+          icon={TrendingUp} 
+          iconColor="#a855f7" 
+        />
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-[#f8f9fc] border-b border-gray-100">
-            <tr>
-              <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Customer</th>
-              <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Contact</th>
-              <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest text-center">Orders</th>
-              <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Lifetime Value</th>
-              <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+        <div className="px-6 py-5 border-b border-gray-50 flex items-center justify-between flex-wrap gap-4">
+          <div className="relative w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input 
+              className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-100" 
+              placeholder="Filter by name or email..." 
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <button className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+            <UserPlus size={18} /> Add Customer
+          </button>
+        </div>
+
+        <DataTable 
+          headers={tableHeaders}
+          data={filteredCustomers}
+          loading={loading}
+          renderRow={(c) => (
+            <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
+              <td className="px-6 py-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-700 font-extrabold flex items-center justify-center text-xs shadow-inner">
+                    {c.name.charAt(0)}
+                  </div>
+                  <Link to={`/orders/customers/${c.id}`} className="font-bold text-gray-900 hover:text-indigo-600 transition-colors">
+                    {c.name}
+                  </Link>
+                </div>
+              </td>
+              <td className="px-6 py-5">
+                <div className="text-sm font-medium text-gray-700">{c.email || '—'}</div>
+                <div className="text-[11px] text-gray-400 font-semibold">{c.phone || '—'}</div>
+              </td>
+              <td className="px-6 py-5 text-center">
+                <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-[10px] font-black tracking-tight">
+                  {c.order_count} ORDERS
+                </span>
+              </td>
+              <td className="px-6 py-5 font-black text-gray-900">
+                ₹{Number(c.total_spent || 0).toLocaleString('en-IN')}
+              </td>
+              <td className="px-6 py-5 text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <Link 
+                    to={`/orders/customers/${c.id}`} 
+                    className="p-2 rounded-lg border border-gray-100 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                  >
+                    <Eye size={18} />
+                  </Link>
+                  <button 
+                    onClick={() => handleDelete(c.id)} 
+                    className="p-2 rounded-lg border border-gray-100 text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {loading ? (
-              <tr><td colSpan="5" className="px-6 py-12 text-center text-gray-400">Loading directory...</td></tr>
-            ) : !customers.length ? (
-              <tr>
-                <td colSpan="5" className="px-6 py-24 text-center">
-                  <div className="flex flex-col items-center justify-center">
-                    <div className="w-16 h-16 bg-[#f8f9fc] rounded-full flex items-center justify-center text-gray-300 text-3xl mb-4">👤</div>
-                    <h3 className="text-lg font-bold text-gray-900">No customer profiles found</h3>
-                    <p className="text-gray-400 text-sm mt-1">Add your first customer to start tracking history</p>
-                    <button className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg">
-                      + Add Customer
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ) : customers.map(c => (
-              <tr key={c.id} className="hover:bg-gray-50 transition">
-                <td className="px-6 py-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm">{c.name.charAt(0)}</div>
-                    <Link to={`/orders/customers/${c.id}`} className="font-bold text-gray-900 hover:text-blue-600">{c.name}</Link>
-                  </div>
-                </td>
-                <td className="px-6 py-5">
-                  <div className="text-sm text-gray-700">{c.email || '—'}</div>
-                  <div className="text-[11px] text-gray-400">{c.phone || '—'}</div>
-                </td>
-                <td className="px-6 py-5 text-center">
-                  <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">{c.order_count}</span>
-                </td>
-                <td className="px-6 py-5 font-bold text-gray-900">
-                  ₹{Number(c.total_spent || 0).toLocaleString('en-IN')}
-                </td>
-                <td className="px-6 py-5 text-right flex items-center justify-end gap-3">
-                  <Link to={`/orders/customers/${c.id}`} className="text-blue-600 hover:text-blue-800 text-xs font-bold uppercase tracking-wider underline">View Profile</Link>
-
-                  <button onClick={() => handleDelete(c.id)} className="w-8 h-8 rounded-lg border border-red-50 text-gray-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors">🗑</button>
-                </td>
-
-              </tr>
-            ))}
-          </tbody>
-
-        </table>
+          )}
+        />
+        
+        {!loading && filteredCustomers.length === 0 && search && (
+          <div className="px-6 py-20 text-center flex flex-col items-center">
+             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
+                <Search size={32} />
+             </div>
+             <h3 className="text-lg font-bold text-slate-800">No customers match your search</h3>
+             <p className="text-slate-400 text-sm mt-1">Try searching for a different name or email address</p>
+          </div>
+        )}
       </div>
     </div>
   );

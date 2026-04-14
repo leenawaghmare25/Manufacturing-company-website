@@ -32,14 +32,8 @@ const TopHeader = ({ title, subtitle, extraActions }) => {
         {subtitle && <p className="text-slate-400 font-semibold text-xs sm:text-base">{subtitle}</p>}
       </div>
       
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto">
-        {extraActions && (
-          <div className="flex items-center gap-3">
-            {extraActions}
-          </div>
-        )}
-        
-        <div className="flex items-center justify-between sm:justify-start gap-4 w-full sm:w-auto">
+      <div className="flex flex-col items-stretch lg:items-end gap-3 w-full lg:w-auto">
+        <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto order-1">
           {/* User Identity Card - Styled to match image */}
           <div className="flex items-center gap-3 bg-white rounded-2xl px-4 py-2 shadow-sm border border-gray-100">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
@@ -55,7 +49,7 @@ const TopHeader = ({ title, subtitle, extraActions }) => {
             </div>
           </div>
 
-          {/* Logout Button - Dark rounded pill */}
+          {/* Logout Button - Dark pill */}
           <button 
             onClick={handleLogout} 
             className="flex items-center justify-center gap-2 bg-slate-900 border border-slate-700 text-white px-6 py-3 rounded-2xl text-sm font-black shadow-lg hover:bg-slate-800 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -65,6 +59,12 @@ const TopHeader = ({ title, subtitle, extraActions }) => {
             <span className="sm:hidden">Exit</span>
           </button>
         </div>
+
+        {extraActions && (
+          <div className="flex items-center justify-end gap-3 order-2">
+            {extraActions}
+          </div>
+        )}
       </div>
     </header>
   );

@@ -26,6 +26,15 @@ export const PRIORITY = {
   LOW: 'Low',
 };
 
+export const ORDER_STATUS = {
+  NEW: 'New',
+  CONFIRMED: 'Confirmed',
+  PROCESSING: 'Processing',
+  SHIPPED: 'Shipped',
+  DELIVERED: 'Delivered',
+  CANCELLED: 'Cancelled',
+};
+
 export const INVENTORY_STATUS = {
   IN_STOCK: 'In Stock',
   LOW_STOCK: 'Low Stock',
