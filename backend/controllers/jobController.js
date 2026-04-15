@@ -123,6 +123,21 @@ exports.createJob = async (req, res) => {
       );
     }
 
+    // STAGE B: Auto-generate a material request in Inventory for each part
+    // This creates a "Pending" request so the Inventory team is notified automatically
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const requestId = `REQ-${Date.now()}-${i}`; // Unique ID per request (e.g. REQ-1712345678-0)
+      const requestedBy = req.user ? req.user.name : 'Job Manager'; // Use authenticated user's name
+      await pool.query(
+        'INSERT INTO requests (request_id, job_id, material, quantity, requested_by) VALUES (?, ?, ?, ?, ?)',
+        [requestId, newJobId, part.name, part.requiredQty, requestedBy]
+      );
+    }
+    if (parts.length > 0) {
+      console.log(`Auto-created ${parts.length} material request(s) for job ${newJobId}`);
+    }
+
     console.log('Creating new job in DB:', newJobId); // Log for tracking
 
     // Fetch the newly created job back from the database to return it

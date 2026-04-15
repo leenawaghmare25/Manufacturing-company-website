@@ -9,6 +9,7 @@ import QualityCheck from './jobs/QualityCheck';
 import Rework from './jobs/Rework';
 import EditJob from './jobs/EditJob';
 import ManageTeams from './jobs/ManageTeams';
+import ProductTemplates from './jobs/ProductTemplates';
 import ProtectedRoute from '../components/ProtectedRoute';
 
 const JobsApp = () => {
@@ -28,6 +29,12 @@ const JobsApp = () => {
         <Route path="teams" element={
           <ProtectedRoute allowedRoles={['Job Manager']}>
             <ManageTeams />
+          </ProtectedRoute>
+        } />
+
+        <Route path="templates" element={
+          <ProtectedRoute allowedRoles={['Job Manager']}>
+            <ProductTemplates />
           </ProtectedRoute>
         } />
         

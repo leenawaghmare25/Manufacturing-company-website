@@ -20,6 +20,7 @@ const teamRoutes        = require('./routes/teamRoutes');
 const authRoutes        = require('./routes/authRoutes');
 const qcRoutes          = require('./routes/qcRoutes'); 
 const customersRoutes   = require('./routes/customers');
+const templateRoutes    = require('./routes/templateRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -69,6 +70,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/qc', qcRoutes);
+app.use('/api/templates', templateRoutes);
 
 // 404 & Error Handling
 app.use((req, res) => res.status(404).json({ success: false, message: 'Route not found' }));

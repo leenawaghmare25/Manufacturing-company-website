@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Package, ClipboardList, ShoppingCart, LayoutDashboard, Box, MessageSquare, Truck, Menu, X, Plus, Users, LogOut, User } from 'lucide-react';
+import { Package, ClipboardList, ShoppingCart, LayoutDashboard, Box, MessageSquare, Truck, Menu, X, Plus, Users, LogOut, User, Layers } from 'lucide-react';
 
 
 
@@ -52,8 +52,9 @@ const UnifiedNavbar = () => {
 
   // Sub-links for Job Management (Manager Only)
   const jobsSubLinks = [
-    { name: 'Dashboard', path: '/jobs', icon: LayoutDashboard },
-    { name: 'Manage Teams', path: '/jobs/teams', icon: Users },
+    { name: 'Dashboard',          path: '/jobs',           icon: LayoutDashboard },
+    { name: 'Product Templates',  path: '/jobs/templates', icon: Layers },
+    { name: 'Manage Teams',       path: '/jobs/teams',     icon: Users },
   ];
 
   const isInventoryActive = location.pathname.startsWith('/inventory');

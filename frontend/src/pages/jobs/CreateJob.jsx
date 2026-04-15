@@ -3,8 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 // Import the useJobs hook to access the addJob function from JobContext
 import { useJobs } from '../../context/JobContext';
-// Import the back arrow icon for the navigation button
-import { ArrowLeft } from 'lucide-react';
+// Import icons
+import { ArrowLeft, Layers, Zap } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 // ============================================================
 // CREATE JOB PAGE — Form for creating a new manufacturing job
@@ -20,6 +22,10 @@ const CreateJob = () => {
   // Local state for teams fetched from the backend
   const [availableTeams, setAvailableTeams] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Template state
+  const [templates, setTemplates] = useState([]);
+  const [templateLoaded, setTemplateLoaded] = useState(false);
+  const [templateName, setTemplateName] = useState('');
 
   // Form data state — stores all the fields for a new job
   const [formData, setFormData] = useState({
@@ -35,30 +41,57 @@ const CreateJob = () => {
     orderId: null          // Source Order ID (if applicable)
   });
 
+  // Fetch all templates once on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    fetch(`${API_BASE}/templates`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setTemplates(d.data || []))
+      .catch(console.error);
+  }, []);
+
+  // Helper: apply a template, scaling parts by order quantity
+  const applyTemplate = (template, qty) => {
+    if (!template) return;
+    const scaledParts = template.parts.map(p => ({
+      name: p.part_name,
+      requiredQty: Math.ceil(parseFloat(p.qty_per_unit) * parseFloat(qty || 1))
+    }));
+    setFormData(prev => ({ ...prev, parts: scaledParts }));
+    setTemplateName(template.name);
+    setTemplateLoaded(true);
+  };
+
   // Effect to handle incoming state from the Dashboard (conversion from Order)
   useEffect(() => {
     if (location.state && location.state.fromOrder) {
       const order = location.state.fromOrder;
       
-      // Parse priority to match Job Management casing
       const priorityMap = {
-        'urgent': 'Urgent',
-        'high': 'High',
-        'medium': 'Medium',
-        'low': 'Low'
+        'urgent': 'Urgent', 'high': 'High', 'medium': 'Medium', 'low': 'Low'
       };
 
+      const qty = order.quantity;
       setFormData(prev => ({
         ...prev,
         product: order.item_name,
-        quantity: order.quantity,
+        quantity: qty,
         priority: priorityMap[order.priority] || 'Medium',
         deadline: order.deadline ? new Date(order.deadline).toISOString().split('T')[0] : '',
         orderId: order.orderId,
         notes: `Automatically generated from Order #${order.orderId} for ${order.customer_name}.`
       }));
+
+      // Auto-match template by product name
+      const token = localStorage.getItem('token');
+      fetch(`${API_BASE}/templates/match/${encodeURIComponent(order.item_name)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(r => r.json())
+        .then(d => { if (d.data) applyTemplate(d.data, qty); })
+        .catch(console.error);
     }
-  }, [location]);
+  }, [location, templates]);
 
   // Fetch teams from the backend when the component mounts
   useEffect(() => {
@@ -136,8 +169,37 @@ const CreateJob = () => {
         </h1>
       </header>
 
+      {/* Template auto-load banner */}
+      {templateLoaded && (
+        <div style={styles.templateBanner}>
+          <Zap size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
+          <span><strong>BOM Auto-Loaded:</strong> Components for <em>{templateName}</em> have been pre-filled and scaled to quantity {formData.quantity}.</span>
+        </div>
+      )}
+
       {/* Form card */}
       <div style={styles.card}>
+        {/* Manual Template Picker (only shown if not from an order) */}
+        {!formData.orderId && templates.length > 0 && (
+          <div style={{ marginBottom: '20px' }}>
+            <label style={styles.label}>
+              <Layers size={14} style={{ display: 'inline', marginRight: '6px' }} />
+              Load from Product Template
+            </label>
+            <select
+              style={styles.select}
+              value={templateName}
+              onChange={e => {
+                const t = templates.find(t => t.name === e.target.value);
+                if (t) applyTemplate(t, formData.quantity || 1);
+                else { setTemplateName(''); setTemplateLoaded(false); }
+              }}
+            >
+              <option value="">— Select a template to auto-fill parts —</option>
+              {templates.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+            </select>
+          </div>
+        )}
         <form onSubmit={handleSubmit} style={styles.form}>
           {/* Product name input */}
           <div style={styles.inputGroup}>
@@ -267,9 +329,10 @@ const CreateJob = () => {
 // ============================================================
 const styles = {
   container: { minHeight: '100vh', backgroundColor: '#f3f4f6', padding: '40px' },
-  header: { display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '32px' },
+  header: { display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '24px' },
   backBtn: { display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer', fontSize: '14px', fontWeight: '600' },
   title: { fontSize: '24px', fontWeight: '700', color: '#111827' },
+  templateBanner: { display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px', maxWidth: '600px', margin: '0 auto 20px', fontSize: '13px', color: '#15803d' },
   card: { backgroundColor: 'white', borderRadius: '16px', padding: '32px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', maxWidth: '600px', margin: '0 auto' },
   form: { display: 'flex', flexDirection: 'column', gap: '24px' },
   row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' },   // Two-column layout

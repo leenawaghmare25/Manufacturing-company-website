@@ -147,6 +147,26 @@ const initializeTables = async () => {
       )
     `);
 
+    await initTable('product_templates', `
+      CREATE TABLE IF NOT EXISTS product_templates (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        name        VARCHAR(255) NOT NULL UNIQUE,
+        description TEXT,
+        created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await initTable('template_parts', `
+      CREATE TABLE IF NOT EXISTS template_parts (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        template_id  INT NOT NULL,
+        part_name    VARCHAR(255) NOT NULL,
+        qty_per_unit DECIMAL(10,2) NOT NULL DEFAULT 1,
+        unit         VARCHAR(50) DEFAULT 'pcs',
+        FOREIGN KEY (template_id) REFERENCES product_templates(id) ON DELETE CASCADE
+      )
+    `);
+
     connection.release();
   } catch (err) {
     console.error('❌ DB connection failed:', err.message);
