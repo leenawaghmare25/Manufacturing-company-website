@@ -21,6 +21,7 @@ const StatusBadge = ({ status }) => {
       case 'qc':
       case 'low stock':
       case 'shipped':
+      case 'pending approval':
         return 'bg-amber-100 text-amber-800 border-amber-200';
       case 'completed':
       case 'active':

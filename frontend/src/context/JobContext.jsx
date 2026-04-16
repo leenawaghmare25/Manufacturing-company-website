@@ -139,6 +139,25 @@ export const JobProvider = ({ children }) => {
     }
   };
 
+  // APPROVE JOB — Formally approves a pending job
+  const approveJob = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await axios.post(`${API_BASE}/jobs/${id}/approve`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        // Update local status to 'Created'
+        setJobs(prev => prev.map(job => job.id === id ? { ...job, status: 'Created' } : job));
+        toast.success(`Job ${id} approved! Production started.`);
+      }
+    } catch (error) {
+      console.error('Error approving job:', error);
+      toast.error('Failed to approve job.');
+      throw error;
+    }
+  };
+
   // GET JOB BY ID — Finds a specific job from the local state array
   // This doesn't make an API call — it searches the already-loaded jobs
   const getJobById = (id) => jobs.find(job => job.id === id);
@@ -180,7 +199,8 @@ export const JobProvider = ({ children }) => {
       addQCRecord,            // Function to create a new QC record
       getQCRecordsByJobId,    // Function to filter QC records by job ID
       pendingOrders,          // Array of confirmed orders ready for conversion
-      fetchPendingOrders      // Function to refresh pending orders list
+      fetchPendingOrders,     // Function to refresh pending orders list
+      approveJob              // Function to formally approve a pending job
     }}>
       {children}  {/* Render all child components inside the provider */}
     </JobContext.Provider>

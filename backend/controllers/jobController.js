@@ -222,3 +222,39 @@ exports.deleteJob = async (req, res) => {
     res.status(500).json({ message: 'Error deleting job' });
   }
 };
+
+// APPROVE JOB — Transitions a job from 'Pending Approval' to 'Created'
+// Called when POST /api/jobs/:id/approve is hit
+exports.approveJob = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // 1. Fetch the job to check if it exists and get its orderId
+    const [jobs] = await pool.query('SELECT * FROM jobs WHERE id = ?', [id]);
+    const job = jobs[0];
+
+    if (!job) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+
+    // 2. Update status to 'Created' (Production Start)
+    await pool.query('UPDATE jobs SET status = "Created" WHERE id = ?', [id]);
+
+    // 3. Log approval in order history if linked to an order
+    if (job.orderId) {
+      await pool.query('INSERT INTO order_history (order_id, status, remarks) VALUES (?, ?, ?)', 
+        [job.orderId, 'processing', `Job ${id} approved by manager. Production started.`]);
+    }
+
+    console.log(`[Job Controller] Job ${id} approved by manager.`);
+
+    res.json({
+      success: true,
+      message: 'Job approved successfully. Production initiated.',
+      jobId: id
+    });
+  } catch (error) {
+    console.error('Error approving job:', error);
+    res.status(500).json({ success: false, message: 'Error approving job' });
+  }
+};

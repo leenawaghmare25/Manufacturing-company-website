@@ -34,7 +34,7 @@ import toast from 'react-hot-toast';
 
 const ManagerDashboard = () => {
   // Get jobs data and operations from the shared context
-  const { jobs, deleteJob, loading, pendingOrders } = useJobs();
+  const { jobs, deleteJob, loading, approveJob } = useJobs();
   // Local state for the filtered/searched list of jobs shown in the table
   const [filteredJobs, setFilteredJobs] = useState([]);
   // Search input text
@@ -43,6 +43,10 @@ const ManagerDashboard = () => {
   const [statusFilter, setStatusFilter] = useState('All Status');
   // Dropdown filter for job priority
   const [priorityFilter, setPriorityFilter] = useState('All Priorities');
+  
+  // Separate jobs pending approval
+  const jobsPendingApproval = jobs.filter(j => j.status === 'Pending Approval');
+  const activeJobs = jobs.filter(j => j.status !== 'Pending Approval');
   
   // Sorting state
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'desc' });
@@ -81,7 +85,7 @@ const ManagerDashboard = () => {
 
   // Filter and sort jobs whenever necessary
   useEffect(() => {
-    let result = [...jobs];
+    let result = [...activeJobs];
 
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
@@ -183,65 +187,61 @@ const ManagerDashboard = () => {
           />
         </div>
 
-        {/* INCOMING ORDERS SECTION (OMS REFLECTION) */}
-        {pendingOrders && pendingOrders.length > 0 && (
+        {/* JOBS PENDING APPROVAL SECTION */}
+        {jobsPendingApproval.length > 0 && (
           <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
             <div className="flex items-center gap-2 mb-4">
               <div className="bg-amber-100 p-1.5 rounded-lg">
                 <ShoppingCart size={18} className="text-amber-600" />
               </div>
-              <h2 className="text-lg font-black text-slate-800 tracking-tight">Orders Ready for Production</h2>
+              <h2 className="text-lg font-black text-slate-800 tracking-tight">Jobs Awaiting Approval</h2>
               <span className="bg-amber-100 text-amber-600 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ml-1">
-                {pendingOrders.length} New
+                {jobsPendingApproval.length} New
               </span>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {pendingOrders.map((order) => (
+              {jobsPendingApproval.map((job) => (
                 <div 
-                  key={order.orderId} 
+                  key={job.id} 
                   className="bg-white rounded-[32px] shadow-sm border border-slate-100 hover:shadow-xl hover:border-amber-200 transition-all duration-300 group relative overflow-hidden flex flex-col"
                 >
-                  {/* Status Bar */}
                   <div className="absolute top-0 left-0 w-full h-1.5 bg-amber-400 opacity-20 group-hover:opacity-100 transition-opacity"></div>
                   
                   <div className="p-7 flex-1 flex flex-col">
-                    {/* Header: ID and Priority */}
                     <div className="flex justify-between items-start mb-6">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Incoming Order</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Auto-Generated Job</span>
                         <div className="flex items-center gap-1.5">
-                          <span className="bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">ID #{order.orderId}</span>
+                          <span className="bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">ID #{job.id}</span>
                         </div>
                       </div>
                       <div className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border ${
-                        order.priority === 'urgent' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                        order.priority === 'high' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+                        job.priority === 'Urgent' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                        job.priority === 'High' ? 'bg-orange-50 text-orange-600 border-orange-100' :
                         'bg-slate-50 text-slate-500 border-slate-100'
                       }`}>
-                        {order.priority}
+                        {job.priority}
                       </div>
                     </div>
 
-                    {/* Product Name */}
                     <div className="mb-6">
                       <div className="flex items-center gap-2 mb-1.5 text-amber-600">
                         <Package size={14} strokeWidth={3} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Production Item</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Product</span>
                       </div>
                       <h3 className="text-lg font-black text-slate-900 line-clamp-1 group-hover:text-amber-600 transition-colors uppercase">
-                        {order.item_name}
+                        {job.product}
                       </h3>
                     </div>
 
-                    {/* Details Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-4 mb-8">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5 text-slate-400">
                           <User size={12} />
-                          <span className="text-[10px] font-bold uppercase tracking-wider">Customer</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Order ID</span>
                         </div>
-                        <span className="text-sm font-bold text-slate-700 truncate">{order.customer_name}</span>
+                        <span className="text-sm font-bold text-slate-700 truncate">#{job.orderId || 'Manual'}</span>
                       </div>
                       
                       <div className="flex flex-col gap-1">
@@ -249,28 +249,36 @@ const ManagerDashboard = () => {
                           <Hash size={12} />
                           <span className="text-[10px] font-bold uppercase tracking-wider">Quantity</span>
                         </div>
-                        <span className="text-sm font-bold text-slate-700">{order.quantity} Units</span>
+                        <span className="text-sm font-bold text-slate-700">{job.quantity} Units</span>
                       </div>
 
                       <div className="flex flex-col gap-1 col-span-2 bg-slate-50 p-3 rounded-2xl border border-dashed border-slate-200 group-hover:border-amber-200 group-hover:bg-amber-50/30 transition-colors">
                         <div className="flex items-center gap-1.5 text-slate-400 group-hover:text-amber-600">
                           <Calendar size={12} />
-                          <span className="text-[10px] font-bold uppercase tracking-wider">Target Deadline</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Deadline</span>
                         </div>
                         <span className="text-sm font-black text-slate-900">
-                          {order.deadline ? new Date(order.deadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Not Set'}
+                          {job.deadline ? new Date(job.deadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Not Set'}
                         </span>
                       </div>
                     </div>
 
-                    {/* Action Button */}
-                    <button 
-                      onClick={() => navigate('/jobs/new', { state: { fromOrder: order } })}
-                      className="mt-auto w-full flex items-center justify-center gap-2 bg-slate-900 text-white py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-amber-500 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-slate-200 hover:shadow-amber-200"
-                    >
-                      <Plus size={16} strokeWidth={3} />
-                      <span>Release to Production</span>
-                    </button>
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => approveJob(job.id)}
+                        className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-indigo-100"
+                      >
+                        <CheckCircle size={16} strokeWidth={3} />
+                        <span>Approve Plan</span>
+                      </button>
+                      <button 
+                        onClick={() => navigate(`/jobs/${job.id}`)}
+                        className="p-4 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-all font-bold"
+                        title="Review Details"
+                      >
+                        <Eye size={18} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -311,9 +319,10 @@ const ManagerDashboard = () => {
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
                   <option>All Status</option>
+                  <option>Pending Approval</option>
+                  <option>Created</option>
                   <option>Production</option>
                   <option>Assembly</option>
-                  <option>Created</option>
                   <option>QC</option>
                   <option>Rework</option>
                   <option>Completed</option>

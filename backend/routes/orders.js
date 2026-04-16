@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const pool    = require('../config/db');
+const automation = require('../utils/automation');
 
 // GET all orders with stats
 router.get('/', async (req, res) => {
@@ -125,6 +126,10 @@ router.post('/', async (req, res) => {
       .catch(err => console.error('History log error:', err.message));
 
 
+
+    // 3. Trigger Automation (Create Job and Assign Tasks)
+    const orderData = { id: newOrderId, item_name, quantity, deadline, priority };
+    automation.handleOrderCreated(orderData);
 
     res.status(201).json({ success: true, message: 'Order created', id: newOrderId });
   } catch (err) {

@@ -160,9 +160,6 @@ const initializeTables = async () => {
       )
     `);
     await ensureColumnExists('suppliers', 'lead_time_days', 'lead_time_days INT DEFAULT 0');
-    await initTable('suppliers_lead_time', `
-      ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS lead_time_days INT DEFAULT 0
-    `);
 
     await initTable('requests', `
       CREATE TABLE IF NOT EXISTS requests (
@@ -210,6 +207,84 @@ const initializeTables = async () => {
         qty_per_unit DECIMAL(10,2) NOT NULL DEFAULT 1,
         unit         VARCHAR(50) DEFAULT 'pcs',
         FOREIGN KEY (template_id) REFERENCES product_templates(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 👤 User & Security Management
+    await initTable('users', `
+      CREATE TABLE IF NOT EXISTS users (
+        id       INT AUTO_INCREMENT PRIMARY KEY,
+        name     VARCHAR(255) NOT NULL,
+        email    VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        role     ENUM('Job Manager', 'Production Staff', 'Inventory Manager', 'Order Manager') NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // 🏗️ Job Management
+    await initTable('jobs', `
+      CREATE TABLE IF NOT EXISTS jobs (
+        id       VARCHAR(50) PRIMARY KEY,
+        product  VARCHAR(255) NOT NULL,
+        quantity INT NOT NULL DEFAULT 1,
+        team     VARCHAR(100),
+        status   VARCHAR(50) DEFAULT 'Created',
+        priority VARCHAR(50) DEFAULT 'Medium',
+        progress INT DEFAULT 0,
+        deadline DATE,
+        notes    TEXT,
+        alert    VARCHAR(255),
+        orderId  INT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (orderId) REFERENCES orders(id) ON DELETE SET NULL
+      )
+    `);
+
+    await initTable('job_parts', `
+      CREATE TABLE IF NOT EXISTS job_parts (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        jobId       VARCHAR(50) NOT NULL,
+        name        VARCHAR(255) NOT NULL,
+        requiredQty INT NOT NULL DEFAULT 1,
+        FOREIGN KEY (jobId) REFERENCES jobs(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 👥 Team Management
+    await initTable('teams', `
+      CREATE TABLE IF NOT EXISTS teams (
+        id   INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL UNIQUE
+      )
+    `);
+
+    await initTable('team_members', `
+      CREATE TABLE IF NOT EXISTS team_members (
+        id      INT AUTO_INCREMENT PRIMARY KEY,
+        teamId  INT NOT NULL,
+        userId  INT NOT NULL,
+        UNIQUE KEY team_user_unq (teamId, userId),
+        FOREIGN KEY (teamId) REFERENCES teams(id) ON DELETE CASCADE,
+        FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 📋 Task Tracking
+    await initTable('tasks', `
+      CREATE TABLE IF NOT EXISTS tasks (
+        taskId        VARCHAR(50) PRIMARY KEY,
+        jobId         VARCHAR(50) NOT NULL,
+        jobName       VARCHAR(255),
+        partName      VARCHAR(255) NOT NULL,
+        worker        VARCHAR(255),
+        status        VARCHAR(50) DEFAULT 'Pending',
+        deadline      DATE,
+        startTime     DATETIME,
+        completedTime DATETIME,
+        duration      VARCHAR(50) DEFAULT '-',
+        FOREIGN KEY (jobId) REFERENCES jobs(id) ON DELETE CASCADE
       )
     `);
 

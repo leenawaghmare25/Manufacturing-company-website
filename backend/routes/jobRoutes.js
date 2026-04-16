@@ -15,6 +15,8 @@ router.get('/pending-orders', authMiddleware, jobController.getPendingOrders);
 router.post('/', authMiddleware, jobController.createJob);
 // PUT /api/jobs/:id — Update an existing job (status, progress, etc.)
 router.put('/:id', authMiddleware, jobController.updateJob);
+// POST /api/jobs/:id/approve — Formally approve a pending job
+router.post('/:id/approve', authMiddleware, jobController.approveJob);
 // DELETE /api/jobs/:id — Delete a job permanently
 router.delete('/:id', authMiddleware, jobController.deleteJob);
 
