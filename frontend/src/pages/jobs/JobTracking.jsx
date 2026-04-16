@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 // Import the shared job context for job data
 import { useJobs } from '../../context/JobContext';
-// Import axios for API calls
-import axios from 'axios';
+// Import the centralized API instance
+import API from '../../api/api';
 // Import icons used in the tracking page UI
 import { 
   ArrowLeft,       // Back button
@@ -25,7 +25,7 @@ import {
   LayoutDashboard  // Overview tab icon
 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+// removed manual API_BASE — now using centralized API utility
 
 // Process step color map
 const STEP_COLORS = {
@@ -79,7 +79,7 @@ const JobTracking = () => {
     setSchedLoad(true);
     setSchedError('');
     try {
-      const res = await axios.get(`${API_BASE}/schedule/${id}`, {
+      const res = await API.get(`/schedule/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSchedule(res.data.tasks || []);
@@ -101,7 +101,7 @@ const JobTracking = () => {
     setIsGenerating(true);
     setSchedError('');
     try {
-      await axios.post(`${API_BASE}/schedule/${id}`, {}, {
+      await API.post(`/schedule/${id}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       await fetchSchedule();
@@ -119,7 +119,7 @@ const JobTracking = () => {
     if (!window.confirm('This will delete all auto-generated tasks. Are you sure?')) return;
     setIsClearing(true);
     try {
-      await axios.delete(`${API_BASE}/schedule/${id}`, {
+      await API.delete(`/schedule/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSchedule([]);
