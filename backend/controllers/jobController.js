@@ -100,8 +100,9 @@ exports.createJob = async (req, res) => {
     // Insert the new job into the jobs table (added 'notes', 'alert', and 'orderId')
     await pool.query(
       'INSERT INTO jobs (id, product, quantity, team, status, priority, progress, deadline, notes, alert, orderId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [newJobId, jobData.product, jobData.quantity, jobData.team, status, priority, progress, jobData.deadline, jobData.notes || '', '', jobData.orderId || null]
+      [newJobId, jobData.product, jobData.quantity, jobData.team, status, priority, progress, jobData.deadline || null, jobData.notes || '', '', jobData.orderId || null]
     );
+
 
     // If this job was created from an order, update the original order's status to 'processing'
     if (jobData.orderId) {
