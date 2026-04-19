@@ -18,13 +18,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
-import Materials from '../../pages/inventory/Materials';
+import Materials from '@/pages/inventory/Materials';
 
 /**
  * Mock the API module to prevent real HTTP requests
  * Returns placeholder data for testing
  */
-vi.mock('../../api/api', () => ({
+vi.mock('@/api/api', () => ({
   default: {
     // GET /materials - Return test materials
     get: vi.fn(async (url) => {
@@ -84,30 +84,7 @@ const renderWithRouter = (component) => {
   return render(<BrowserRouter>{component}</BrowserRouter>);
 };
 
-// Mock child components to isolate Materials page testing
-vi.mock('../components/TopHeader', () => ({
-  default: () => <div data-testid="top-header">Top Header</div>,
-}));
 
-vi.mock('../components/common/DataTable', () => ({
-  default: ({ rows, columns, onEdit, onDelete }) => (
-    <div data-testid="data-table">
-      {rows.map((row) => (
-        <div key={row.id} data-testid={`row-${row.id}`}>
-          {columns.map((col) => (
-            <span key={col.key}>{row[col.key]}</span>
-          ))}
-          <button onClick={() => onEdit?.(row)}>Edit</button>
-          <button onClick={() => onDelete?.(row.id)}>Delete</button>
-        </div>
-      ))}
-    </div>
-  ),
-}));
-
-vi.mock('../components/common/StatusBadge', () => ({
-  default: ({ status }) => <span>{status}</span>,
-}));
 
 describe('Materials Component - FE-008 to FE-015', () => {
   beforeEach(() => {

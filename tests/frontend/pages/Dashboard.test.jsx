@@ -30,7 +30,7 @@ vi.mock('chart.js', () => ({
 }));
 
 vi.mock('react-chartjs-2', () => {
-  const { createElement: h } = require('react');
+  const { createElement: h } = require('../../../src/frontend/node_modules/react');
   return {
     Bar: ({ data, options }) => h('div', { 'data-testid': 'bar-chart' }, 'Chart Bar Mock'),
     Line: ({ data, options }) => h('div', { 'data-testid': 'line-chart' }, 'Chart Line Mock'),
@@ -39,11 +39,11 @@ vi.mock('react-chartjs-2', () => {
 });
 
 // Import Dashboard AFTER mocking chart.js
-import Dashboard from '../../pages/inventory/Dashboard';
+import Dashboard from '@/pages/inventory/Dashboard';
 
 // Mock the API module - prevents real API calls during tests
 // All /reports endpoints intercepted by MSW
-vi.mock('../../api/api', () => ({
+vi.mock('@/api/api', () => ({
   default: {
     get: vi.fn(async (url) => {
       if (url === '/reports/inventory-summary') {

@@ -29,7 +29,10 @@ export default defineConfig({
     },
     
     // Run setup files before all tests
-    setupFiles: ['./src/__tests__/setup.js'],
+    setupFiles: [path.resolve(__dirname, '../../tests/frontend/setup.js')],
+    
+    // Explicitly include test directories outside the root
+    include: [path.resolve(__dirname, '../../tests/frontend/**/*.test.{js,jsx}').replace(/\\/g, '/')],
     
     // Coverage reporting configuration
     coverage: {
@@ -42,7 +45,7 @@ export default defineConfig({
       // Exclude test files from coverage
       exclude: [
         'node_modules/',
-        'src/__tests__/',
+        '../../tests/frontend/',
         '**/*.test.jsx',
       ],
       
@@ -58,6 +61,25 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@testing-library/jest-dom': path.resolve(__dirname, 'node_modules/@testing-library/jest-dom'),
+      '@testing-library/react': path.resolve(__dirname, 'node_modules/@testing-library/react'),
+      '@testing-library/user-event': path.resolve(__dirname, 'node_modules/@testing-library/user-event'),
+      'msw': path.resolve(__dirname, 'node_modules/msw'),
+      'react': path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+      'react-router-dom': path.resolve(__dirname, 'node_modules/react-router-dom'),
+      'lucide-react': path.resolve(__dirname, 'node_modules/lucide-react'),
+      'chart.js': path.resolve(__dirname, 'node_modules/chart.js'),
+      'react-chartjs-2': path.resolve(__dirname, 'node_modules/react-chartjs-2'),
+      'axios': path.resolve(__dirname, 'node_modules/axios'),
+    },
+  },
+  
+  // Allow accessing test files outside of the project root
+  server: {
+    fs: {
+      strict: false,
+      allow: ['../..'],
     },
   },
 });

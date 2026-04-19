@@ -13,10 +13,10 @@
  */
 
 const request = require('supertest');
-const pool = require('../../config/db');
+const pool = require('../../../src/backend/config/db');
 
 // Mock pool for integration tests
-jest.mock('../../config/db');
+jest.mock('../../../src/backend/config/db');
 
 describe('Backend Integration Tests - Materials & Stock Flow', () => {
   beforeEach(() => {
